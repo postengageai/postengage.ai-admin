@@ -26,8 +26,8 @@ export default function SocialAccountsPage() {
         setLoading(true)
         const response = await socialAccountsApi.list({ page: page + 1, limit: 10 })
         if (response.data) {
-          setAccounts(response.data.data.data ?? [])
-          const pag = response.data.data.pagination
+          setAccounts(response.data.data ?? [])
+          const pag = response.data.pagination
           setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
         }
       } catch (err) {

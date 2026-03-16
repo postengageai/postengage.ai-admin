@@ -28,8 +28,8 @@ export default function NotificationsPage() {
         setLoading(true)
         const response = await notificationsApi.list({ page: page + 1, limit: 10 })
         if (response.data) {
-          setNotifications(response.data.data.data ?? [])
-          const pag = response.data.data.pagination
+          setNotifications(response.data.data ?? [])
+          const pag = response.data.pagination
           setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
         }
       } catch (err) {

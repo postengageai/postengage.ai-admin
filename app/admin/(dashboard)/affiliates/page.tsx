@@ -25,8 +25,8 @@ export default function AffiliatesPage() {
         setLoading(true)
         const response = await affiliatesApi.list({ page: page + 1, limit: 10 })
         if (response.data) {
-          setAffiliates(response.data.data.data ?? [])
-          const pag = response.data.data.pagination
+          setAffiliates(response.data.data ?? [])
+          const pag = response.data.pagination
           setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
         }
       } catch (err) {

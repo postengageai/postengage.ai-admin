@@ -46,8 +46,8 @@ export default function PaymentsPage() {
           ...(statusFilter && statusFilter !== 'all' && { status: statusFilter }),
         })
         if (response.data) {
-          setPayments(response.data.data.data ?? [])
-          const pag = response.data.data.pagination
+          setPayments(response.data.data ?? [])
+          const pag = response.data.pagination
           setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
         }
       } catch (err) {

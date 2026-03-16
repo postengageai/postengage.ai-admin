@@ -45,8 +45,8 @@ export default function FlaggedRepliesPage() {
           ...(statusFilter && statusFilter !== 'all' && { status: statusFilter }),
         })
         if (response.data) {
-          setReplies(response.data.data.data ?? [])
-          const pag = response.data.data.pagination
+          setReplies(response.data.data ?? [])
+          const pag = response.data.pagination
           setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
         }
       } catch (err) {

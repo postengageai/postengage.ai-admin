@@ -27,8 +27,8 @@ export default function AutomationsPage() {
         setLoading(true)
         const response = await automationsApi.list({ page: page + 1, limit: 10 })
         if (response.data) {
-          setAutomations(response.data.data.data ?? [])
-          const pag = response.data.data.pagination
+          setAutomations(response.data.data ?? [])
+          const pag = response.data.pagination
           setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
         }
       } catch (err) {

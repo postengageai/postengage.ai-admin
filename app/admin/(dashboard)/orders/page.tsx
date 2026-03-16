@@ -26,8 +26,8 @@ export default function OrdersPage() {
         setLoading(true)
         const response = await ordersApi.list({ page: page + 1, limit: 10 })
         if (response.data) {
-          setOrders(response.data.data.data ?? [])
-          const pag = response.data.data.pagination
+          setOrders(response.data.data ?? [])
+          const pag = response.data.pagination
           setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
         }
       } catch (err) {

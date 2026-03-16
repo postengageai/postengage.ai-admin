@@ -24,8 +24,8 @@ export default function VoiceDnaPage() {
         setLoading(true)
         const response = await voiceDnaApi.list({ page: page + 1, limit: 10 })
         if (response.data) {
-          setDnas(response.data.data.data ?? [])
-          const pag = response.data.data.pagination
+          setDnas(response.data.data ?? [])
+          const pag = response.data.pagination
           setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
         }
       } catch (err) {

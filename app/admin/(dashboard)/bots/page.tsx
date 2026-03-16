@@ -29,8 +29,8 @@ export default function BotsPage() {
         setLoading(true)
         const response = await botsApi.list({ page: page + 1, limit: 10 })
         if (response.data) {
-          setBots(response.data.data.data ?? [])
-          const pag = response.data.data.pagination
+          setBots(response.data.data ?? [])
+          const pag = response.data.pagination
           setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
         }
       } catch (err) {

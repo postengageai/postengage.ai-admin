@@ -47,14 +47,14 @@ export default function PromptDetailPage() {
       setError(null)
 
       const response = await promptsApi.getDefinition(definitionId)
-      setDefinition(response.data!.data.definition)
-      setVersions(response.data!.data.versions)
+      setDefinition(response.data!.definition)
+      setVersions(response.data!.versions)
 
       setFormData({
-        name: response.data!.data.definition.name,
-        description: response.data!.data.definition.description || '',
-        tags: (response.data!.data.definition.tags || []).join(', '),
-        notes: response.data!.data.definition.notes || '',
+        name: response.data!.definition.name,
+        description: response.data!.definition.description || '',
+        tags: (response.data!.definition.tags || []).join(', '),
+        notes: response.data!.definition.notes || '',
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load prompt')
@@ -79,7 +79,7 @@ export default function PromptDetailPage() {
         notes: formData.notes.trim() || undefined,
       })
 
-      setDefinition(response.data!.data)
+      setDefinition(response.data!)
       setEditingDef(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update definition')
@@ -93,7 +93,7 @@ export default function PromptDetailPage() {
       const response = await promptsApi.updateDefinition(definitionId, {
         is_active: !definition.is_active,
       })
-      setDefinition(response.data!.data)
+      setDefinition(response.data!)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to toggle active status')
     }

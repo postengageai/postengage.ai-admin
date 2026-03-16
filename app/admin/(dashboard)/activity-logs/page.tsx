@@ -47,8 +47,8 @@ export default function ActivityLogsPage() {
           ...(actionFilter && actionFilter !== 'all' && { action: actionFilter }),
         })
         if (response.data) {
-          setLogs(response.data.data.data ?? [])
-          const pag = response.data.data.pagination
+          setLogs(response.data.data ?? [])
+          const pag = response.data.pagination
           setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
         }
       } catch (err) {

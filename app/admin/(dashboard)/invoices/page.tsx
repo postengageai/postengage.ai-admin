@@ -25,8 +25,8 @@ export default function InvoicesPage() {
         setLoading(true)
         const response = await invoicesApi.list({ page: page + 1, limit: 10 })
         if (response.data) {
-          setInvoices(response.data.data.data ?? [])
-          const pag = response.data.data.pagination
+          setInvoices(response.data.data ?? [])
+          const pag = response.data.pagination
           setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
         }
       } catch (err) {
