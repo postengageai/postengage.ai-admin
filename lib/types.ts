@@ -36,14 +36,28 @@ export interface ActivityItem {
   metadata?: Record<string, any>;
 }
 
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'EDITOR' | 'SUPPORT'
+
 export interface BlogPost {
-  id: string;
+  _id: string;
+  id?: string;
   title: string;
   status?: 'PUBLISHED' | 'DRAFT' | 'ARCHIVED';
   slug?: string;
   excerpt?: string;
-  author?: { name: string };
+  content?: string;
+  author?: string | { name: string };
+  published_at?: string | null;
   publishedAt?: string;
+  created_at?: string;
   createdAt?: string;
+  updated_at?: string;
   viewCount?: number;
+  tags?: string[];
+  cover_image?: string | null;
+  seo?: {
+    meta_title?: string;
+    meta_description?: string;
+    keywords?: string[];
+  };
 }

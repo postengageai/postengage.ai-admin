@@ -155,7 +155,7 @@ export default function BlogPage() {
           {post.published_at ? (
             <span className="text-muted-foreground">{formatDate(post.published_at)}</span>
           ) : (
-            <span className="text-muted-foreground">Updated {formatDate(post.updated_at)}</span>
+            <span className="text-muted-foreground">Updated {formatDate(post.updated_at ?? '')}</span>
           )}
         </div>
       ),

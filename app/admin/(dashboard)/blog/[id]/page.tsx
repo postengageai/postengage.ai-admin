@@ -64,7 +64,7 @@ export default function BlogEditorPage() {
       setIsLoading(true)
       const post = await blogApi.getPost(id as string)
       setTitle(post.title)
-      setSlug(post.slug)
+      setSlug(post.slug ?? "")
       setExcerpt(post.excerpt || '')
       setContent(post.content || '')
       setStatus(post.status)
@@ -329,7 +329,7 @@ export default function BlogEditorPage() {
             
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={status} onValueChange={(value: BlogPost['status']) => setStatus(value)}>
+              <Select value={status} onValueChange={(value) => setStatus(value as BlogPost['status'])}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
