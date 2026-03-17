@@ -7,7 +7,7 @@ import {
   Zap, Users, Bot, MessageSquare, Banknote, Package, Globe,
   BarChart3, Flag, Activity, Brain, Mic, BookOpen, CreditCard,
   Image, Bell, UserCheck, Receipt, Handshake, Terminal, ChevronRight,
-  ArrowLeftRight,
+  ArrowLeftRight, Sliders,
 } from 'lucide-react'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -51,6 +51,10 @@ const navGroups = [
   ]},
   { label: 'Prompts', defaultOpen: false, items: [
     { title: 'Prompt Library', href: '/admin/prompts', icon: Terminal, badge: 'NEW' },
+  ]},
+  { label: 'LLM Config', defaultOpen: false, items: [
+    { title: 'Operation Models', href: '/admin/operation-model-configs', icon: Sliders },
+    { title: 'User LLM Configs', href: '/admin/llm-configs', icon: Brain },
   ]},
   { label: 'Billing', defaultOpen: false, items: [
     { title: 'Orders', href: '/admin/orders', icon: Receipt },

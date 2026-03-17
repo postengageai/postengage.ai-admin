@@ -435,3 +435,51 @@ export const promptsApi = {
       raw_response: rawResponse,
     }),
 };
+
+// ── Operation Model Configs ────────────────────────────────────────────────────
+
+export type LlmProviderLiteral = 'openai' | 'anthropic' | 'google' | 'groq' | 'ollama';
+export type OperationTypeLiteral =
+  | 'intent_classification'
+  | 'response_generation'
+  | 'voice_dna_analysis'
+  | 'memory_consolidation'
+  | 'entity_extraction'
+  | 'knowledge_retrieval';
+
+export interface OperationModelConfig {
+  _id: string;
+  operation: OperationTypeLiteral;
+  provider: LlmProviderLiteral;
+  model: string;
+  is_enabled: boolean;
+  description?: string;
+  updated_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const operationModelConfigsApi = {
+  list: () =>
+    httpClient.get<{
+      configs: OperationModelConfig[];
+      supported_operations: OperationTypeLiteral[];
+      supported_providers: LlmProviderLiteral[];
+    }>(`${BASE}/operation-model-configs`),
+
+  getOne: (operation: OperationTypeLiteral) =>
+    httpClient.get<OperationModelConfig | null>(`${BASE}/operation-model-configs/${operation}`),
+
+  upsert: (
+    operation: OperationTypeLiteral,
+    data: { provider: LlmProviderLiteral; model: string; is_enabled?: boolean; description?: string },
+  ) => httpClient.patch<OperationModelConfig>(`${BASE}/operation-model-configs/${operation}`, data),
+
+  toggle: (operation: OperationTypeLiteral, is_enabled: boolean) =>
+    httpClient.patch<{ message: string }>(`${BASE}/operation-model-configs/${operation}/toggle`, {
+      is_enabled,
+    }),
+
+  remove: (operation: OperationTypeLiteral) =>
+    httpClient.delete<{ message: string }>(`${BASE}/operation-model-configs/${operation}`),
+};
