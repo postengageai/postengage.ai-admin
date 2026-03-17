@@ -49,9 +49,9 @@ export const usersApi = {
 
 export const creditsApi = {
   list: (p?: PaginationParams) =>
-    httpClient.get<PaginatedResponse<any>>(`${BASE}/credits`, { params: p }),
+    httpClient.get<PaginatedResponse<any>>(`${BASE}/credits/transactions`, { params: p }),
   getByUser: (userId: string) =>
-    httpClient.get(`${BASE}/credits/user/${userId}`),
+    httpClient.get(`${BASE}/credits/transactions/user/${userId}`),
   adjust: (userId: string, data: { amount: number; reason: string }) =>
     httpClient.post(`${BASE}/credits/adjust`, { userId, ...data }),
 };
@@ -186,22 +186,24 @@ export const leadsApi = {
 // ─── Payments ─────────────────────────────────────────────────────────────────
 
 export const paymentsApi = {
-  list: (p?: PaginationParams & { status?: string }) =>
-    httpClient.get<PaginatedResponse<any>>(`${BASE}/payments`, { params: p }),
-  getById: (id: string) => httpClient.get(`${BASE}/payments/${id}`),
+  list: (p?: PaginationParams & { status?: string; provider?: string }) =>
+    httpClient.get<PaginatedResponse<any>>(`${BASE}/payments/records`, { params: p }),
+  getStats: () => httpClient.get(`${BASE}/payments/records/stats`),
+  getById: (id: string) => httpClient.get(`${BASE}/payments/records/${id}`),
+  getByUser: (userId: string) => httpClient.get(`${BASE}/payments/records/user/${userId}`),
 };
 
 export const ordersApi = {
   list: (p?: PaginationParams & { status?: string }) =>
-    httpClient.get<PaginatedResponse<any>>(`${BASE}/orders`, { params: p }),
-  getById: (id: string) => httpClient.get(`${BASE}/orders/${id}`),
-  update: (id: string, data: any) => httpClient.patch(`${BASE}/orders/${id}`, data),
+    httpClient.get<PaginatedResponse<any>>(`${BASE}/payments/orders`, { params: p }),
+  getById: (id: string) => httpClient.get(`${BASE}/payments/orders/${id}`),
+  update: (id: string, data: any) => httpClient.patch(`${BASE}/payments/orders/${id}`, data),
 };
 
 export const invoicesApi = {
   list: (p?: PaginationParams) =>
-    httpClient.get<PaginatedResponse<any>>(`${BASE}/invoices`, { params: p }),
-  getById: (id: string) => httpClient.get(`${BASE}/invoices/${id}`),
+    httpClient.get<PaginatedResponse<any>>(`${BASE}/payments/invoices`, { params: p }),
+  getById: (id: string) => httpClient.get(`${BASE}/payments/invoices/${id}`),
 };
 
 // ─── Credit Packages ──────────────────────────────────────────────────────────
@@ -209,13 +211,21 @@ export const invoicesApi = {
 export interface AdminCreditPackage {
   _id: string;
   name: string;
-  credits: number;
+  // Backend may return either field name
+  credits?: number;
+  credit_amount?: number;
   price: number;
-  currency: string;
-  is_active: boolean;
+  currency?: string;
+  currency_id?: string;
+  // Backend returns status:'active'|'inactive' OR is_active:boolean
+  is_active?: boolean;
+  status?: string;
+  is_featured?: boolean;
   is_popular?: boolean;
+  tax_rate?: number;
   description?: string;
   features?: string[];
+  metadata?: Record<string, unknown>;
   created_at: string;
 }
 

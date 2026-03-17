@@ -31,7 +31,7 @@ export default function IntelligenceLogsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
-  const [typeFilter, setTypeFilter] = useState<string>('')
+  const [typeFilter, setTypeFilter] = useState<string>('all')
   const [pagination, setPagination] = useState({ total: 0, total_pages: 1 })
 
   useEffect(() => {
@@ -82,7 +82,7 @@ export default function IntelligenceLogsPage() {
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 {typeOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}

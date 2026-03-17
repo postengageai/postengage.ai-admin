@@ -34,7 +34,7 @@ export default function ActivityLogsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
-  const [actionFilter, setActionFilter] = useState<string>('')
+  const [actionFilter, setActionFilter] = useState<string>('all')
   const [pagination, setPagination] = useState({ total: 0, total_pages: 1 })
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function ActivityLogsPage() {
                 <SelectValue placeholder="Filter by action" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Actions</SelectItem>
+                <SelectItem value="all">All Actions</SelectItem>
                 {actionOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}

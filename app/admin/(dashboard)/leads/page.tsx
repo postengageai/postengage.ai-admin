@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
+import { useRouter } from 'next/navigation'
 import { leadsApi, AdminLead } from '@/lib/api/admin'
 import { AdminPageHeader } from '@/components/admin/admin-page-header'
 import { StatusBadge } from '@/components/admin/status-badge'
+import { PaginationControls } from '@/components/admin/pagination-controls'
 import { Badge } from '@/components/ui/badge'
 import {
   Select,
@@ -30,11 +32,12 @@ const statusOptions = [
 ]
 
 export default function LeadsPage() {
+  const router = useRouter()
   const [leads, setLeads] = useState<AdminLead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
-  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [pagination, setPagination] = useState({ total: 0, total_pages: 1 })
 
   useEffect(() => {
@@ -76,16 +79,16 @@ export default function LeadsPage() {
       <AdminPageHeader title="Leads" description="Manage leads and track conversions" />
 
       {loading ? (
-        <div className="text-muted-foreground text-sm p-4 text-center">Loading...</div>
+        <div className="text-muted-foreground text-sm p-8 text-center">Loading...</div>
       ) : (
         <div className="space-y-4">
           <div className="flex gap-2 items-center">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0) }}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 {statusOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
@@ -93,13 +96,14 @@ export default function LeadsPage() {
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-sm text-muted-foreground">Click a row to view details</p>
           </div>
 
           <div className="rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name/Email</TableHead>
+                  <TableHead>Name / Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
@@ -108,49 +112,56 @@ export default function LeadsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {leads.map((lead) => (
-                  <TableRow key={lead._id}>
-                    <TableCell className="font-medium">
-                      {lead.name || lead.email || '-'}
-                    </TableCell>
-                    <TableCell>{lead.phone || '-'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{lead.source}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={lead.status} />
-                    </TableCell>
-                    <TableCell>{lead.score || 0}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(lead.created_at), 'MMM d, yyyy')}
+                {leads.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      No leads found
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  leads.map((lead) => (
+                    <TableRow
+                      key={lead._id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => router.push(`/admin/leads/${lead._id}`)}
+                    >
+                      <TableCell className="font-medium">
+                        {lead.name || lead.email || '—'}
+                        {lead.name && lead.email && (
+                          <p className="text-xs text-muted-foreground">{lead.email}</p>
+                        )}
+                      </TableCell>
+                      <TableCell>{lead.phone || '—'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{lead.source}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={lead.status} />
+                      </TableCell>
+                      <TableCell>
+                        {lead.score !== undefined ? (
+                          <span className={`font-medium ${lead.score >= 70 ? 'text-green-600' : lead.score >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {lead.score}
+                          </span>
+                        ) : '—'}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {format(new Date(lead.created_at), 'MMM d, yyyy')}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
 
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Total: {pagination.total} leads</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="px-3 py-1 text-sm border rounded disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-muted-foreground px-3 py-1">
-                Page {page + 1} of {pagination.total_pages}
-              </span>
-              <button
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page >= pagination.total_pages - 1}
-                className="px-3 py-1 text-sm border rounded disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
+            <PaginationControls
+              page={page}
+              totalPages={pagination.total_pages}
+              onPageChange={setPage}
+            />
           </div>
         </div>
       )}

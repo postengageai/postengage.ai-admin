@@ -186,12 +186,12 @@ export default function PromptsPage() {
               />
             </div>
 
-            <Select value={filterType || ''} onValueChange={(v) => setFilterType(v || null)}>
+            <Select value={filterType || '__all__'} onValueChange={(v) => setFilterType(v === '__all__' ? null : v)}>
               <SelectTrigger className="sm:w-40 bg-muted/50 border-border">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="__all__">All Types</SelectItem>
                 {PROMPT_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type.replace(/_/g, ' ')}
