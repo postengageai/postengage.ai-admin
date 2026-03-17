@@ -184,7 +184,7 @@ export default function IntelligenceLogsPage() {
                         ) : '—'}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {log.tokens ?? ((log.input_tokens ?? 0) + (log.output_tokens ?? 0)) || '—'}
+                        {(log.tokens ?? ((log.input_tokens ?? 0) + (log.output_tokens ?? 0))) || '—'}
                       </TableCell>
                       <TableCell className="text-sm font-medium">
                         {log.cost != null ? `$${Number(log.cost).toFixed(4)}` : '—'}
