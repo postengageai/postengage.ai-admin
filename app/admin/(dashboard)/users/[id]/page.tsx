@@ -24,7 +24,27 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { ArrowLeft, Trash2, CreditCard, Edit2 } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { ArrowLeft, Trash2, CreditCard, Edit2, History } from 'lucide-react'
+
+// Safe date formatting - avoids RangeError if date is null/undefined/invalid
+const safeFormat = (date: string | null | undefined, fmt: string) => {
+  if (!date) return '—'
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return '—'
+    return format(d, fmt)
+  } catch {
+    return '—'
+  }
+}
 
 export default function UserDetailPage() {
   const params = useParams()
@@ -33,6 +53,8 @@ export default function UserDetailPage() {
 
   const [user, setUser] = useState<AdminUser | null>(null)
   const [credits, setCredits] = useState<any>(null)
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [txLoading, setTxLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -57,19 +79,36 @@ export default function UserDetailPage() {
         usersApi.getById(userId),
         usersApi.getCredits(userId),
       ])
-      if (userRes.status === 'fulfilled' && userRes.value.data) {
-        const u = userRes.value.data as AdminUser
-        setUser(u)
-        setEditRole(u.role)
-        setEditStatus(u.status)
+      if (userRes.status === 'fulfilled') {
+        // getById response: axios_res.data = { success: true, data: {...user} }
+        const u = (userRes.value.data as any)?.data as AdminUser
+        if (u) {
+          setUser(u)
+          setEditRole(u.role)
+          setEditStatus(u.status)
+        }
       }
-      if (creditsRes.status === 'fulfilled' && creditsRes.value.data) {
-        setCredits(creditsRes.value.data)
+      if (creditsRes.status === 'fulfilled') {
+        const cData = (creditsRes.value.data as any)?.data
+        setCredits(cData ?? null)
       }
     } catch (err) {
       setError('Failed to load user')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadTransactions = async () => {
+    try {
+      setTxLoading(true)
+      const res = await creditsApi.getByUser(userId)
+      const txData = (res.data as any)?.data
+      setTransactions(Array.isArray(txData) ? txData : [])
+    } catch (err) {
+      console.error('Failed to load transactions', err)
+    } finally {
+      setTxLoading(false)
     }
   }
 
@@ -83,7 +122,8 @@ export default function UserDetailPage() {
     try {
       setSaving(true)
       const res = await usersApi.update(userId, { role: editRole, status: editStatus })
-      if (res.data) setUser(res.data as AdminUser)
+      const updated = (res.data as any)?.data as AdminUser
+      if (updated) setUser(updated)
       setEditMode(false)
       showSuccess('User updated successfully')
     } catch (err) {
@@ -114,8 +154,12 @@ export default function UserDetailPage() {
       setCreditAmount('')
       setCreditReason('')
       setShowCreditDialog(false)
+      // Reload credits
       const res = await usersApi.getCredits(userId)
-      if (res.data) setCredits(res.data)
+      const cData = (res.data as any)?.data
+      setCredits(cData ?? null)
+      // Reload tx if visible
+      if (transactions.length > 0) loadTransactions()
       showSuccess('Credits adjusted successfully')
     } catch (err) {
       console.error('Failed to adjust credits', err)
@@ -140,6 +184,8 @@ export default function UserDetailPage() {
   }
 
   const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || '—'
+  const balance = credits?.balance ?? credits?.credits ?? 0
+  const totalUsed = credits?.total_used ?? credits?.total_spent ?? 0
 
   return (
     <div className="space-y-6">
@@ -193,7 +239,6 @@ export default function UserDetailPage() {
                 <p className="text-sm mt-1">{fullName}</p>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs text-muted-foreground">Role</Label>
@@ -231,13 +276,10 @@ export default function UserDetailPage() {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <div className="mt-1">
-                    <StatusBadge status={user.status} />
-                  </div>
+                  <div className="mt-1"><StatusBadge status={user.status} /></div>
                 )}
               </div>
             </div>
-
             <div>
               <Label className="text-xs text-muted-foreground">Email Verification</Label>
               <div className="mt-1">
@@ -246,32 +288,24 @@ export default function UserDetailPage() {
                 </Badge>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs text-muted-foreground">Joined</Label>
-                <p className="text-sm mt-1">{format(new Date(user.created_at), 'PPP')}</p>
+                <p className="text-sm mt-1">{safeFormat(user.created_at, 'PPP')}</p>
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Last Updated</Label>
-                <p className="text-sm mt-1">{format(new Date(user.updated_at), 'PPP')}</p>
+                <p className="text-sm mt-1">{safeFormat(user.updated_at, 'PPP')}</p>
               </div>
             </div>
-
             {editMode && (
               <div className="flex gap-2 pt-2 border-t">
                 <Button size="sm" onClick={handleSave} disabled={saving}>
                   {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setEditMode(false)
-                    setEditRole(user.role)
-                    setEditStatus(user.status)
-                  }}
-                >
+                <Button size="sm" variant="outline" onClick={() => {
+                  setEditMode(false); setEditRole(user.role); setEditStatus(user.status)
+                }}>
                   Cancel
                 </Button>
               </div>
@@ -283,43 +317,74 @@ export default function UserDetailPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base">Credits</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => setShowCreditDialog(true)}>
-              <CreditCard className="h-4 w-4 mr-1" />
-              Adjust
-            </Button>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="sm" onClick={() => {
+                setShowCreditDialog(true)
+              }}>
+                <CreditCard className="h-4 w-4 mr-1" />
+                Adjust
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => {
+                if (transactions.length === 0) loadTransactions()
+                else setTransactions([])
+              }}>
+                <History className="h-4 w-4 mr-1" />
+                History
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
-            {credits ? (
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Current Balance</Label>
-                  <p className="text-3xl font-bold mt-1">
-                    {(credits.balance ?? credits.credits ?? credits.amount ?? 0).toLocaleString()}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  {credits.total_earned !== undefined && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Total Earned</Label>
-                      <p className="text-sm font-medium mt-1">{credits.total_earned.toLocaleString()}</p>
-                    </div>
-                  )}
-                  {credits.total_spent !== undefined && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Total Spent</Label>
-                      <p className="text-sm font-medium mt-1">{credits.total_spent.toLocaleString()}</p>
-                    </div>
-                  )}
-                </div>
-                {credits.updated_at && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Last Updated</Label>
-                    <p className="text-sm mt-1">{format(new Date(credits.updated_at), 'PPP')}</p>
-                  </div>
-                )}
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-3 bg-muted/40 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-1">Balance</p>
+                <p className="text-2xl font-bold">{balance.toLocaleString()}</p>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No credit data available</p>
+              <div className="text-center p-3 bg-muted/40 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-1">Total Used</p>
+                <p className="text-2xl font-bold">{totalUsed.toLocaleString()}</p>
+              </div>
+              <div className="text-center p-3 bg-muted/40 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-1">Total Earned</p>
+                <p className="text-2xl font-bold">
+                  {(credits?.total_earned ?? (balance + totalUsed)).toLocaleString()}
+                </p>
+              </div>
+            </div>
+            {credits?.updated_at && (
+              <p className="text-xs text-muted-foreground">
+                Last updated: {safeFormat(credits.updated_at, 'PPP p')}
+              </p>
+            )}
+
+            {/* Transaction history (lazy-loaded) */}
+            {txLoading && <p className="text-xs text-muted-foreground">Loading transactions...</p>}
+            {transactions.length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Amount</TableHead>
+                      <TableHead className="text-xs">Type</TableHead>
+                      <TableHead className="text-xs">Reason</TableHead>
+                      <TableHead className="text-xs">Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.slice(0, 10).map((tx: any) => (
+                      <TableRow key={tx._id}>
+                        <TableCell className={`text-sm font-medium ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {tx.amount > 0 ? '+' : ''}{tx.amount}
+                        </TableCell>
+                        <TableCell className="text-xs capitalize">{tx.type || '—'}</TableCell>
+                        <TableCell className="text-xs">{tx.reason || '—'}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {safeFormat(tx.created_at, 'MMM d, yyyy')}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -328,16 +393,12 @@ export default function UserDetailPage() {
       {/* Delete Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Delete User</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete <strong>{user.email}</strong>? This action cannot be undone and will remove all associated data.
+            Are you sure you want to delete <strong>{user.email}</strong>? This action cannot be undone.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting ? 'Deleting...' : 'Delete User'}
             </Button>
@@ -348,18 +409,20 @@ export default function UserDetailPage() {
       {/* Adjust Credits Dialog */}
       <Dialog open={showCreditDialog} onOpenChange={setShowCreditDialog}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adjust Credits</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Adjust Credits for {user.email}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
+            <div className="p-3 bg-muted/40 rounded-lg text-center">
+              <p className="text-xs text-muted-foreground">Current Balance</p>
+              <p className="text-2xl font-bold">{balance.toLocaleString()}</p>
+            </div>
             <div>
-              <Label>Amount</Label>
-              <p className="text-xs text-muted-foreground mb-1">Use a negative number to deduct credits</p>
+              <Label>Amount <span className="text-muted-foreground text-xs">(negative to deduct)</span></Label>
               <Input
                 type="number"
                 value={creditAmount}
                 onChange={(e) => setCreditAmount(e.target.value)}
                 placeholder="e.g. 100 or -50"
+                className="mt-1"
               />
             </div>
             <div>
@@ -373,13 +436,8 @@ export default function UserDetailPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreditDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAdjustCredits}
-              disabled={saving || !creditAmount || !creditReason}
-            >
+            <Button variant="outline" onClick={() => setShowCreditDialog(false)}>Cancel</Button>
+            <Button onClick={handleAdjustCredits} disabled={saving || !creditAmount || !creditReason}>
               {saving ? 'Applying...' : 'Apply Adjustment'}
             </Button>
           </DialogFooter>

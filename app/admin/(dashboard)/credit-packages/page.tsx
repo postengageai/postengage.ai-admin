@@ -47,6 +47,9 @@ export default function CreditPackagesPage() {
   const [page, setPage] = useState(0)
   const [pagination, setPagination] = useState({ total: 0, total_pages: 1 })
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  // Currency lookup: { [_id]: { code, symbol, name } }
+  const [currencyMap, setCurrencyMap] = useState<Record<string, { code?: string; symbol?: string; name?: string }>>({})
+  const [currencies, setCurrencies] = useState<any[]>([])
 
   // Dialog states
   const [showFormDialog, setShowFormDialog] = useState(false)
@@ -59,7 +62,23 @@ export default function CreditPackagesPage() {
 
   useEffect(() => {
     loadPackages()
+    loadCurrencies()
   }, [page])
+
+  const loadCurrencies = async () => {
+    try {
+      const res = await currenciesApi.list()
+      const list = (res.data as any)?.data ?? []
+      setCurrencies(list)
+      const map: Record<string, any> = {}
+      list.forEach((c: any) => {
+        if (c._id) map[c._id] = c
+      })
+      setCurrencyMap(map)
+    } catch {
+      // silent — currency map is optional enhancement
+    }
+  }
 
   const loadPackages = async () => {
     try {
@@ -206,7 +225,9 @@ export default function CreditPackagesPage() {
                   packages.map((pkg) => {
                     const active = isPackageActive(pkg)
                     const credits = pkg.credit_amount ?? pkg.credits ?? 0
-                    const currency = pkg.currency ?? pkg.currency_id ?? '—'
+                    // Resolve currency: prefer direct name, else look up by ID in map
+                    const resolvedCurrency = pkg.currency
+                      ?? (pkg.currency_id ? (currencyMap[pkg.currency_id]?.code ?? currencyMap[pkg.currency_id]?.symbol ?? currencyMap[pkg.currency_id]?.name ?? pkg.currency_id.slice(-6)) : '—')
                     return (
                       <TableRow key={pkg._id}>
                         <TableCell>
@@ -219,7 +240,9 @@ export default function CreditPackagesPage() {
                         </TableCell>
                         <TableCell>{credits.toLocaleString()}</TableCell>
                         <TableCell>${(pkg.price ?? 0).toFixed(2)}</TableCell>
-                        <TableCell>{currency}</TableCell>
+                        <TableCell>
+                          <span title={pkg.currency_id}>{resolvedCurrency}</span>
+                        </TableCell>
                         <TableCell>
                           <Badge variant={active ? 'default' : 'secondary'}>
                             {active ? 'Active' : 'Inactive'}
@@ -314,12 +337,27 @@ export default function CreditPackagesPage() {
             </div>
             <div>
               <Label>Currency</Label>
-              <Input
-                value={form.currency}
-                onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                placeholder="USD"
-                className="mt-1"
-              />
+              {currencies.length > 0 ? (
+                <select
+                  value={form.currency}
+                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  <option value="">Select currency</option>
+                  {currencies.map((c: any) => (
+                    <option key={c._id} value={c._id}>
+                      {c.code || c.symbol || c.name || c._id}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Input
+                  value={form.currency}
+                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                  placeholder="USD"
+                  className="mt-1"
+                />
+              )}
             </div>
             <div>
               <Label>Description</Label>

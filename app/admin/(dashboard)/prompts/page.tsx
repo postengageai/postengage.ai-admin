@@ -67,7 +67,7 @@ export default function PromptsPage() {
       setLoading(true)
       setError(null)
       const response = await promptsApi.listDefinitions()
-      setDefinitions(response.data!.data ?? [])
+      setDefinitions((response.data as any)?.data ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load prompts')
     } finally {
@@ -99,7 +99,7 @@ export default function PromptsPage() {
         tags: tagsArray.length > 0 ? tagsArray : undefined,
       })
 
-      setDefinitions([response.data!, ...definitions])
+      setDefinitions([(response.data as any)?.data, ...definitions].filter(Boolean))
       setShowNewDialog(false)
       setForm({
         name: '',

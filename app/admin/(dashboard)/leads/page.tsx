@@ -1,12 +1,13 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { leadsApi, AdminLead } from '@/lib/api/admin'
 import { AdminPageHeader } from '@/components/admin/admin-page-header'
 import { StatusBadge } from '@/components/admin/status-badge'
 import { PaginationControls } from '@/components/admin/pagination-controls'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -22,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Search } from 'lucide-react'
 
 const statusOptions = [
   { value: 'new', label: 'New' },
@@ -31,6 +33,36 @@ const statusOptions = [
   { value: 'lost', label: 'Lost' },
 ]
 
+const safeFormat = (date: string | null | undefined) => {
+  if (!date) return '—'
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return '—'
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  } catch {
+    return '—'
+  }
+}
+
+// Get display name from lead object — handles both old and new field names
+const getLeadName = (lead: AdminLead) =>
+  lead.full_name || lead.name || lead.email || '—'
+
+// Get source/platform from lead — handles both old and new field names
+const getLeadSource = (lead: AdminLead) => {
+  if (lead.captured_from) return lead.captured_from
+  if (lead.source) return lead.source
+  if (lead.social_profiles?.[0]?.platform) return lead.social_profiles[0].platform
+  return '—'
+}
+
+// Get primary social handle
+const getLeadHandle = (lead: AdminLead) => {
+  const sp = lead.social_profiles?.[0]
+  if (!sp) return null
+  return sp.username ? `@${sp.username}` : sp.url || null
+}
+
 export default function LeadsPage() {
   const router = useRouter()
   const [leads, setLeads] = useState<AdminLead[]>([])
@@ -38,32 +70,41 @@ export default function LeadsPage() {
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [pagination, setPagination] = useState({ total: 0, total_pages: 1 })
 
-  useEffect(() => {
-    const loadLeads = async () => {
-      try {
-        setLoading(true)
-        const response = await leadsApi.list({
-          page: page + 1,
-          limit: 10,
-          ...(statusFilter && statusFilter !== 'all' && { status: statusFilter }),
-        })
-        if (response.data) {
-          setLeads(response.data.data ?? [])
-          const pag = response.data.pagination
-          setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
-        }
-      } catch (err) {
-        setError('Failed to load leads')
-        console.error(err)
-      } finally {
-        setLoading(false)
+  const loadLeads = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await leadsApi.list({
+        page: page + 1,
+        limit: 10,
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(search && { search }),
+      })
+      if (response.data) {
+        setLeads(response.data.data ?? [])
+        const pag = response.data.pagination
+        setPagination({ total: pag?.total ?? 0, total_pages: pag?.total_pages ?? 1 })
       }
+    } catch (err) {
+      setError('Failed to load leads')
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
+  }, [page, statusFilter, search])
 
+  useEffect(() => {
     loadLeads()
-  }, [page, statusFilter])
+  }, [loadLeads])
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    setSearch(searchInput)
+    setPage(0)
+  }
 
   if (error) {
     return (
@@ -76,13 +117,27 @@ export default function LeadsPage() {
 
   return (
     <div>
-      <AdminPageHeader title="Leads" description="Manage leads and track conversions" />
+      <AdminPageHeader title="Leads" description="Manage captured leads and track pipeline progress" />
 
-      {loading ? (
+      {loading && !leads.length ? (
         <div className="text-muted-foreground text-sm p-8 text-center">Loading...</div>
       ) : (
         <div className="space-y-4">
-          <div className="flex gap-2 items-center">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-[200px] max-w-sm">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, email..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button type="submit" size="sm" variant="secondary">Search</Button>
+            </form>
+
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0) }}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Filter by status" />
@@ -90,25 +145,33 @@ export default function LeadsPage() {
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 {statusOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-sm text-muted-foreground">Click a row to view details</p>
+
+            {(search || statusFilter !== 'all') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setSearch(''); setSearchInput(''); setStatusFilter('all'); setPage(0) }}
+              >
+                Clear filters
+              </Button>
+            )}
+            <p className="text-xs text-muted-foreground ml-auto">Click a row to view details</p>
           </div>
 
           <div className="rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name / Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Source</TableHead>
+                  <TableHead>Name / Handle</TableHead>
+                  <TableHead>Source / Platform</TableHead>
+                  <TableHead>Tags</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Score</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>Captured</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -119,37 +182,55 @@ export default function LeadsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  leads.map((lead) => (
-                    <TableRow
-                      key={lead._id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => router.push(`/admin/leads/${lead._id}`)}
-                    >
-                      <TableCell className="font-medium">
-                        {lead.name || lead.email || '—'}
-                        {lead.name && lead.email && (
-                          <p className="text-xs text-muted-foreground">{lead.email}</p>
-                        )}
-                      </TableCell>
-                      <TableCell>{lead.phone || '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{lead.source}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={lead.status} />
-                      </TableCell>
-                      <TableCell>
-                        {lead.score !== undefined ? (
-                          <span className={`font-medium ${lead.score >= 70 ? 'text-green-600' : lead.score >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
-                            {lead.score}
-                          </span>
-                        ) : '—'}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(lead.created_at), 'MMM d, yyyy')}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  leads.map((lead) => {
+                    const handle = getLeadHandle(lead)
+                    const source = getLeadSource(lead)
+                    const capturedDate = lead.captured_at || lead.created_at
+                    return (
+                      <TableRow
+                        key={lead._id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => router.push(`/admin/leads/${lead._id}`)}
+                      >
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{getLeadName(lead)}</p>
+                            {handle && <p className="text-xs text-muted-foreground">{handle}</p>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {source !== '—' ? (
+                            <Badge variant="outline" className="capitalize">{source}</Badge>
+                          ) : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {lead.tags && lead.tags.length > 0 ? (
+                              lead.tags.slice(0, 2).map((tag) => (
+                                <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                              ))
+                            ) : '—'}
+                            {lead.tags && lead.tags.length > 2 && (
+                              <Badge variant="secondary" className="text-xs">+{lead.tags.length - 2}</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={lead.status} />
+                        </TableCell>
+                        <TableCell>
+                          {lead.score !== undefined ? (
+                            <span className={`font-medium ${lead.score >= 70 ? 'text-green-600' : lead.score >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              {lead.score}
+                            </span>
+                          ) : '—'}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {safeFormat(capturedDate)}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 )}
               </TableBody>
             </Table>

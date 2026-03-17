@@ -48,10 +48,10 @@ export const usersApi = {
 // ─── Credits ──────────────────────────────────────────────────────────────────
 
 export const creditsApi = {
-  list: (p?: PaginationParams) =>
+  list: (p?: PaginationParams & { userId?: string; type?: string; search?: string }) =>
     httpClient.get<PaginatedResponse<any>>(`${BASE}/credits/transactions`, { params: p }),
-  getByUser: (userId: string) =>
-    httpClient.get(`${BASE}/credits/transactions/user/${userId}`),
+  getByUser: (userId: string, p?: PaginationParams) =>
+    httpClient.get(`${BASE}/credits/transactions/user/${userId}`, { params: p }),
   adjust: (userId: string, data: { amount: number; reason: string }) =>
     httpClient.post(`${BASE}/credits/adjust`, { userId, ...data }),
 };
@@ -80,16 +80,28 @@ export const socialAccountsApi = {
 export interface AdminAutomation {
   _id: string;
   name: string;
+  description?: string;
   status: string;
-  trigger_count?: number;
+  is_active?: boolean;
   user_id: string;
   platform: string;
+  trigger_type?: string;
+  trigger_config?: Record<string, unknown>;
+  action_type?: string;
+  action_config?: Record<string, unknown>;
+  // Stats — backend uses execution_count, not trigger_count
+  execution_count?: number;
+  success_count?: number;
+  failure_count?: number;
+  /** @deprecated use execution_count */
+  trigger_count?: number;
+  last_run_at?: string;
   created_at: string;
   updated_at: string;
 }
 
 export const automationsApi = {
-  list: (p?: PaginationParams) =>
+  list: (p?: PaginationParams & { search?: string; status?: string; platform?: string }) =>
     httpClient.get<PaginatedResponse<AdminAutomation>>(`${BASE}/automations`, { params: p }),
   getById: (id: string) => httpClient.get<AdminAutomation>(`${BASE}/automations/${id}`),
   delete: (id: string) => httpClient.delete(`${BASE}/automations/${id}`),
@@ -100,15 +112,22 @@ export const automationsApi = {
 export interface AdminBot {
   _id: string;
   name: string;
+  description?: string;
   status: string;
+  is_active?: boolean;
   ai_model?: string;
   user_id: string;
+  social_account_id?: string;
+  behavior?: Record<string, unknown>;
+  knowledge_sources?: Array<{ _id: string; name?: string } | string>;
   stats: {
     total_replies: number;
     total_escalations: number;
+    total_skipped?: number;
     avg_confidence?: number;
   };
   created_at: string;
+  updated_at?: string;
 }
 
 export const botsApi = {
@@ -165,17 +184,30 @@ export const conversationsApi = {
 
 export interface AdminLead {
   _id: string;
+  // Actual backend fields
+  full_name?: string;
+  captured_from?: string;
+  social_profiles?: Array<{ platform?: string; username?: string; url?: string; profile_id?: string }>;
+  tags?: string[];
+  captured_at?: string;
+  last_engaged?: string;
+  notes?: string;
+  // Some backends may use these legacy names
   name?: string;
   email?: string;
   phone?: string;
-  source: string;
-  status: string;
+  source?: string;
   score?: number;
+  status: string;
+  user_id?: string;
+  bot_id?: string;
+  conversation_id?: string;
   created_at: string;
+  updated_at?: string;
 }
 
 export const leadsApi = {
-  list: (p?: PaginationParams & { status?: string }) =>
+  list: (p?: PaginationParams & { status?: string; search?: string }) =>
     httpClient.get<PaginatedResponse<AdminLead>>(`${BASE}/leads`, { params: p }),
   getById: (id: string) => httpClient.get<AdminLead>(`${BASE}/leads/${id}`),
   update: (id: string, data: Partial<AdminLead>) =>
@@ -194,14 +226,14 @@ export const paymentsApi = {
 };
 
 export const ordersApi = {
-  list: (p?: PaginationParams & { status?: string }) =>
+  list: (p?: PaginationParams & { status?: string; search?: string }) =>
     httpClient.get<PaginatedResponse<any>>(`${BASE}/payments/orders`, { params: p }),
   getById: (id: string) => httpClient.get(`${BASE}/payments/orders/${id}`),
   update: (id: string, data: any) => httpClient.patch(`${BASE}/payments/orders/${id}`, data),
 };
 
 export const invoicesApi = {
-  list: (p?: PaginationParams) =>
+  list: (p?: PaginationParams & { status?: string; search?: string }) =>
     httpClient.get<PaginatedResponse<any>>(`${BASE}/payments/invoices`, { params: p }),
   getById: (id: string) => httpClient.get(`${BASE}/payments/invoices/${id}`),
 };
@@ -251,7 +283,7 @@ export const currenciesApi = {
 // ─── Affiliates ───────────────────────────────────────────────────────────────
 
 export const affiliatesApi = {
-  list: (p?: PaginationParams) =>
+  list: (p?: PaginationParams & { status?: string; search?: string }) =>
     httpClient.get<PaginatedResponse<any>>(`${BASE}/affiliates`, { params: p }),
   getById: (id: string) => httpClient.get(`${BASE}/affiliates/${id}`),
   update: (id: string, data: any) => httpClient.patch(`${BASE}/affiliates/${id}`, data),

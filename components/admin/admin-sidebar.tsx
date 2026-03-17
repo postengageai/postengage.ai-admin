@@ -7,6 +7,7 @@ import {
   Zap, Users, Bot, MessageSquare, Banknote, Package, Globe,
   BarChart3, Flag, Activity, Brain, Mic, BookOpen, CreditCard,
   Image, Bell, UserCheck, Receipt, Handshake, Terminal, ChevronRight,
+  ArrowLeftRight,
 } from 'lucide-react'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -31,7 +32,8 @@ const navGroups = [
   ]},
   { label: 'Users & Auth', defaultOpen: true, items: [
     { title: 'Users', href: '/admin/users', icon: Users },
-    { title: 'Credits', href: '/admin/credits', icon: CreditCard },
+    { title: 'Credit Balances', href: '/admin/credits', icon: CreditCard },
+    { title: 'Transactions', href: '/admin/transactions', icon: ArrowLeftRight },
   ]},
   { label: 'Engagement', defaultOpen: true, items: [
     { title: 'Social Accounts', href: '/admin/social-accounts', icon: Globe },
